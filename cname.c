@@ -16,6 +16,7 @@
 #include <string.h>
 #include <curl/curl.h>
 #include <time.h>
+#include <stdbool.h>
 /*============================================================================*/
 
 /*============================================================================*/
@@ -32,18 +33,19 @@ void end(int *count);
 void help();
 void geturl(char *datalist, char ***list, int *list_size, char *name);
 char *delchar(char *line);
-int check(char *url, int *count);
+int check(char *url, int *count, bool);
 /*============================================================================*/
 
 /*============================================================================*/
 int main(int argc, char **argv)
 {
     // Set default values
-    char *name = "Fastiraz";
+    char *name = "";
     char *datalist = "data.json";
     char **list = NULL;
     int list_size = 0;
     int count = 0;
+    bool verbose = false;
 
     // Parse the command-line arguments
     for (int i = 1; i < argc; i++) {
@@ -51,6 +53,8 @@ int main(int argc, char **argv)
             name = argv[++i];
         } else if (strcmp(argv[i], "-w") == 0 && i + 1 < argc) {
             datalist = argv[++i];
+        } else if (strcmp(argv[i], "-v") == 0) {
+            verbose = true;
         } else {
             help();
             return 1;
@@ -65,7 +69,7 @@ int main(int argc, char **argv)
     geturl(datalist, &list, &list_size, name);
     for(int i=0; i < list_size; i++){
         remove_n(list[i]);
-        check(list[i], &count);
+        check(list[i], &count, verbose);
     }
     free(list);
     end(&count);
@@ -90,7 +94,7 @@ void remove_n(char *str){
 /*============================================================================*/
 void banner(){
   printf("\n\n===============================================================\n");
-  printf("CName v1.0.1\n");
+  printf("CName v1.0.2\n");
   printf("by Fastiraz\n");
   printf("===============================================================\n");
 }
@@ -152,10 +156,11 @@ void end(int *count){
 /*============================================================================*/
 void help(){
   printf("\nFLAGS:\n");
+  printf("\t-n : Set the username\n");
   printf("\t-v : Verbose output (errors)\n");
   printf("\t-w : Custom json file that contain data to test\n");
   printf("\nEXAMPLES:\n");
-  printf("\tUsage :\t./cname Fastiraz -j data.json\n");
+  printf("\tUsage :\t./cname -n username\n");
 }
 /*============================================================================*/
 
@@ -208,7 +213,7 @@ char *delchar(char *line){
 /*============================================================================*/
 
 /*============================================================================*/
-int check(char *url, int *count){
+int check(char *url, int *count, bool verbose){
   CURL* curl;
   CURLcode res;
 
@@ -222,7 +227,7 @@ int check(char *url, int *count){
 
     // Perform request
     res = curl_easy_perform(curl);
-    if (res != CURLE_OK) {
+    if (res != CURLE_OK && verbose) {
       fprintf(stderr, "%s\t | \x1B[35m%s\x1B[0m\n", curl_easy_strerror(res), url);
     } else {
       // Get status code
@@ -235,9 +240,11 @@ int check(char *url, int *count){
         (*count)++;
       } else {
         // Page does not exist
-        printf("Username does not exist\t\t");
-        printf(" | \033[0;31m%s\033[0m\n", url);
-        (*count)++;
+        if (verbose) {
+            printf("Username does not exist\t\t");
+            printf(" | \033[0;31m%s\033[0m\n", url);
+            (*count)++;
+        }
       }
     }
 
